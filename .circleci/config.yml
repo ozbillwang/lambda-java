@@ -66,4 +66,4 @@ workflows:
     jobs:
       - build:
           name: build
-          context: DEVContext
+          context: DevContext
