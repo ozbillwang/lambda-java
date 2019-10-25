@@ -1,0 +1,69 @@
+version: 2.1
+
+### Context Setup
+# AWS_ACCESS_KEY_ID
+# AWS_SECRET_ACCESS_KEY
+# AWS_ACCOUNT_ID
+# AWS_REGION
+# S3_BUCKET
+
+executors:
+  terragrunt_executor:
+    docker:
+      - image: alpine/terragrunt:0.12.9
+  gradle_executor:
+    docker:
+      - image: circleci/openjdk:8-jdk-stretch
+
+jobs:
+  build:
+    executor: gradle_executor
+    environment:
+      # Configure the JVM and Gradle to avoid OOM errors
+      _JAVA_OPTIONS: "-Xmx3g"
+      GRADLE_OPTS: "-Dorg.gradle.daemon=false -Dorg.gradle.workers.max=2"
+      LAMBDA_PATH: "lambda-s3"
+    steps: # a collection of executable commands
+      - checkout # check out source code to working directory
+      # Read about caching dependencies: https://circleci.com/docs/2.0/caching/
+      - run: cat ${LAMBDA_PATH}/gradle/wrapper/gradle-wrapper.properties > gradle-wrapper.properties
+      - restore_cache:
+          key: v1-gradle-wrapper-{{ checksum "gradle-wrapper.properties" }}
+      - run: cat ${LAMBDA_PATH}/build.gradle > build.gradle
+      - restore_cache:
+          key: v1-gradle-cache-{{ checksum "build.gradle" }}
+      - run:
+          name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
+          # Use "./gradlew test" instead if tests are not run in parallel
+          command: |
+            pushd ${LAMBDA_PATH}
+            gradle build
+            mv build/distributions/lamda-s3-1.0-SNAPSHOT.zip build/distributions/lamda-s3-1.0-${CIRCLE_BUILD_NUM}.zip
+            sudo apt update
+            sudo apt install python-pip
+            sudo pip install awscli
+            aws s3 cp build/distributions/lamda-s3-1.0-${CIRCLE_BUILD_NUM}.zip s3://${S3_BUCKET}/libs/lamda-s3-1.0-${CIRCLE_BUILD_NUM}.zip
+      - save_cache:
+          paths:
+            - ~/.gradle/wrapper
+          key: v1-gradle-wrapper-{{ checksum "gradle-wrapper.properties" }}
+      - save_cache:
+          paths:
+            - ~/.gradle/caches
+          key: v1-gradle-cache-{{ checksum "build.gradle" }}
+      - store_test_results:
+      # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
+          path: build/test-results/test
+      - store_artifacts: # Upload test results for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
+          path: build/test-results/test
+          when: always
+      - store_artifacts:
+          path: build/libs
+      # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+
+workflows:
+  build:
+    jobs:
+      - build:
+          name: build
+          context: DEVContext
