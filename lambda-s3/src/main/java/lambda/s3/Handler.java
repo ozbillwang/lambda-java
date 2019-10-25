@@ -1,4 +1,4 @@
-package example;
+package lambda.s3;
 
 import java.awt.Color;
 import java.awt.Graphics2D;

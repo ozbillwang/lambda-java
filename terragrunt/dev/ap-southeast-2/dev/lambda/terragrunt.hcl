@@ -11,10 +11,6 @@ include {
 # These are the variables we have to pass in to use the module specified in the terragrunt configuration above
 inputs = {
   project = "lambda-s3"
-  environment = "sit"
-
-  s3_bucket = "123456789012-lambda-assets"
-  s3_key    = "libs/lamda-1.0-SNAPSHOT.zip"
-
+  s3_bucket = "${get_aws_account_id()}-lambda-assets"
 }
 
