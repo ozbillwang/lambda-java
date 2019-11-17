@@ -45,17 +45,12 @@ jobs:
           key: v1-gradle-cache-{{ checksum "build.gradle" }}
       - run:
           name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
-          # Use "./gradlew test" instead if tests are not run in parallel
           command: |
             pushd ${LAMBDA_PATH}
             # add unit test and integration test here
             gradle build
-            mv build/distributions/lambda-s3-1.0-SNAPSHOT.zip build/distributions/lambda-s3-1.0-${CIRCLE_BUILD_NUM}.zip
-            sudo apt update
-            sudo apt install python-pip
-            sudo pip install awscli
-            export S3_BUCKET=${AWS_ACCOUNT_ID}-lambda-assets
-            aws s3 cp build/distributions/lambda-s3-1.0-${CIRCLE_BUILD_NUM}.zip s3://${S3_BUCKET}/libs/lambda-s3-1.0-${CIRCLE_BUILD_NUM}.zip
+            ls -l build/libs
+            ls -l build/distributions
       - save_cache:
           paths:
             - ~/.gradle/wrapper
