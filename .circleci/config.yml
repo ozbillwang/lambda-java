@@ -124,6 +124,52 @@ jobs:
             git tag ${NEXT_TAG}
             git push origin ${NEXT_TAG}
 
+  version_github:
+    executor: semver_executor
+    steps:
+      - run: apk --update add git openssh coreutils jq curl
+      - checkout
+      - attach_workspace:
+          at: lambda-s3/build
+      - run:
+          name: Create incremental version
+          command: |
+            set -ex
+            # Run this job on master branch only
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [[ "$BRANCH" != "master" ]]; then
+              echo 'Not tag on feature branches ${BRANCH}, Aborting script';
+              exit 1;
+            fi
+
+            # Generate next incremental tag (Semantic Versioning)
+            ssh-keyscan bitbucket.org >> /root/.ssh/known_hosts
+            LATEST_TAG=$(git ls-remote --tags origin |awk -F \/ '{print $NF}'|grep ^1.0. |sort -Vr|head -1)
+            echo ${LATEST_TAG}
+            if [[ -z "${LATEST_TAG}" ]]
+            then
+                NEXT_TAG="1.0.0"
+            else
+                NEXT_TAG=$(semver -c -i patch ${LATEST_TAG})
+            fi
+            echo ${NEXT_TAG}
+
+            # upload the zip file
+            export ZIP_PATH="lambda-s3/build/distributions/"
+            mv ${ZIP_PATH}/lamda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip
+            apk update
+            apk add py-pip
+            pip install awscli
+            aws s3 cp ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lamda-s3-${NEXT_TAG}.zip
+
+            # push the tag
+            echo "Set Bitbucket Username & Email"
+            git config user.name "ci"
+            git config user.email "ci"
+            echo "Create & Push Bitbucket Tag"
+            git tag ${NEXT_TAG}
+            git push origin ${NEXT_TAG}
+
   terragrunt_plan:
     executor: terragrunt_executor
     parameters:
@@ -168,7 +214,7 @@ workflows:
       - build:
           name: build
           context: DEVContext
-      - version:
+      - version_github:
           name: version
           context: DEVContext
           requires:
