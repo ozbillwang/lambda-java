@@ -213,10 +213,10 @@ workflows:
     jobs:
       - build:
           name: build
-          context: DEVContext
+          context: DevContext
       - version_github:
           name: version
-          context: DEVContext
+          context: DevContext
           requires:
             - build
           filters:
@@ -225,7 +225,7 @@ workflows:
       - terragrunt_plan:
           name: terragrunt_plan_dev
           environment: dev
-          context: DEVContext
+          context: DevContext
           filters:
             tags:
               only: /1.0.*/
@@ -244,7 +244,7 @@ workflows:
       - terragrunt_apply:
           name: terragrunt_apply_dev
           environment: dev
-          context: DEVContext
+          context: DevContext
           requires:
             - approval_dev
           filters:
