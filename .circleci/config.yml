@@ -103,6 +103,8 @@ jobs:
             fi
             echo ${NEXT_TAG}
 
+            find lambda-s3/build -ls
+
             # upload the zip file
             export ZIP_PATH="lambda-s3/build/distributions/"
             mv ${ZIP_PATH}/lamda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip
