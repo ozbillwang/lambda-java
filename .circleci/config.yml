@@ -5,15 +5,26 @@ version: 2.1
 # AWS_SECRET_ACCESS_KEY
 # AWS_ACCOUNT_ID
 # AWS_REGION
-# S3_BUCKET
+# # Used for bitbucket repositories
+# BITBUCKET_ACCESS_KEY
+# BITBUCKET_ACCESS_SECRET
+# # Used for github repositories
+# GITHUB_ACCESS_KEY
+# GITHUB_ACCESS_SECRET
+
+### Prerequisite
+# s3 bucket "${AWS_ACCOUNT_ID}-lambda-assets" has been created"
 
 executors:
   terragrunt_executor:
     docker:
-      - image: alpine/terragrunt:0.12.9
+      - image: alpine/terragrunt:0.12.13
   gradle_executor:
     docker:
       - image: circleci/openjdk:8-jdk-stretch
+  semver_executor:
+    docker:
+      - image: alpine/semver:5.5.0
 
 jobs:
   build:
@@ -37,6 +48,7 @@ jobs:
           # Use "./gradlew test" instead if tests are not run in parallel
           command: |
             pushd ${LAMBDA_PATH}
+            # add unit test and integration test here
             gradle build
             mv build/distributions/lambda-s3-1.0-SNAPSHOT.zip build/distributions/lambda-s3-1.0-${CIRCLE_BUILD_NUM}.zip
             sudo apt update
@@ -52,19 +64,145 @@ jobs:
           paths:
             - ~/.gradle/caches
           key: v1-gradle-cache-{{ checksum "build.gradle" }}
-      - store_test_results:
-      # Upload test results for display in Test Summary: https://circleci.com/docs/2.0/collect-test-data/
-          path: build/test-results/test
-      - store_artifacts: # Upload test results for display in Artifacts: https://circleci.com/docs/2.0/artifacts/
-          path: build/test-results/test
-          when: always
       - store_artifacts:
-          path: build/libs
-      # See https://circleci.com/docs/2.0/deployment-integrations/ for deploy examples
+          path: lambda-s3/build/distributions
+          when: always
+      - persist_to_workspace:
+          root: lambda-s3/build
+          paths:
+            - lib
+            - distributions
+
+  version_bitbucket:
+    executor: semver_executor
+    steps:
+      - run: apk --update add git openssh coreutils jq curl
+      - checkout
+      - attach_workspace:
+          at: lambda-s3/build
+      - run:
+          name: Create incremental version
+          command: |
+            set -ex
+            # Run this job on master branch only
+            BRANCH=$(git rev-parse --abbrev-ref HEAD)
+            if [[ "$BRANCH" != "master" ]]; then
+              echo 'Not tag on feature branches ${BRANCH}, Aborting script';
+              exit 1;
+            fi
+
+            # Generate next incremental tag (Semantic Versioning)
+            ssh-keyscan bitbucket.org >> /root/.ssh/known_hosts
+            LATEST_TAG=$(git ls-remote --tags origin |awk -F \/ '{print $NF}'|grep ^1.0. |sort -Vr|head -1)
+            echo ${LATEST_TAG}
+            if [[ -z "${LATEST_TAG}" ]]
+            then
+                NEXT_TAG="1.0.0"
+            else
+                NEXT_TAG=$(semver -c -i patch ${LATEST_TAG})
+            fi
+            echo ${NEXT_TAG}
+
+            # upload the zip file
+            export ZIP_PATH="lambda-s3/build/distributions/"
+            mv ${ZIP_PATH}/lamda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip
+            apk update
+            apk add py-pip
+            pip install awscli
+            aws s3 cp ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lamda-s3-${NEXT_TAG}.zip
+
+            # push the tag
+            TOKEN=`curl -X POST -u "${BITBUCKET_ACCESS_KEY}:${BITBUCKET_ACCESS_SECRET}"       https://bitbucket.org/site/oauth2/access_token       -d grant_type=client_credentials | jq .access_token -r`
+            echo ${TOKEN}
+
+            echo "Change Remote Url"
+            git remote set-url origin https://x-token-auth:${TOKEN}@bitbucket.org/${CIRCLE_PROJECT_USERNAME}/${CIRCLE_PROJECT_REPONAME}.git
+            echo "Set Bitbucket Username & Email"
+            git config user.name "ci"
+            git config user.email "ci"
+            echo "Create & Push Bitbucket Tag"
+            git tag ${NEXT_TAG}
+            git push origin ${NEXT_TAG}
+
+  terragrunt_plan:
+    executor: terragrunt_executor
+    parameters:
+      environment:
+        type: enum
+        enum: ["test", "dev", "ops", "qa", "sit", "demo", "uat", "prod"]
+    steps:
+      - checkout
+      - run:
+          name: terragrunt dry-run
+          environment:
+            ENVIRONMENT: << parameters.environment >>
+          command: |
+            pushd terragrunt/dfp-mts-${ENVIRONMENT}
+            export TF_VAR_s3_key="libs/lamda-s3-${CIRCLE_TAG}.zip"
+            export TF_VAR_environment="${ENVIRONMENT}"
+            terragrunt validate-all
+            terragrunt plan-all --terragrunt-non-interactive
+
+  terragrunt_apply:
+    executor: terragrunt_executor
+    parameters:
+      environment:
+        type: enum
+        enum: ["test", "dev", "ops", "qa", "sit", "demo", "uat", "prod"]
+    steps:
+      - checkout
+      - run:
+          name: terragrunt apply
+          environment:
+            ENVIRONMENT: << parameters.environment >>
+          command: |
+            pushd terragrunt/dfp-mts-${ENVIRONMENT}
+            export TF_VAR_s3_key="libs/lamda-s3-${CIRCLE_TAG}.zip"
+            export TF_VAR_environment="${ENVIRONMENT}"
+            terragrunt plan-all --terragrunt-non-interactive
+            terragrunt apply-all --terragrunt-non-interactive -auto-approve
 
 workflows:
-  build:
+  build-and-deploy:
     jobs:
       - build:
           name: build
-          context: DevContext
+          context: DEVContext
+      - version:
+          name: version
+          context: DEVContext
+          requires:
+            - build
+          filters:
+            branches:
+              only: master
+      - terragrunt_plan:
+          name: terragrunt_plan_dev
+          environment: dev
+          context: DEVContext
+          filters:
+            tags:
+              only: /1.0.*/
+            branches:
+              ignore: /.*/
+      - approval:
+          name: approval_dev
+          type: approval
+          requires:
+            - terragrunt_plan_dev
+          filters:
+            tags:
+              only: /1.0.*/
+            branches:
+              ignore: /.*/
+      - terragrunt_apply:
+          name: terragrunt_apply_dev
+          environment: dev
+          context: DEVContext
+          requires:
+            - approval_dev
+          filters:
+            tags:
+              only: /1.0.*/
+            branches:
+              ignore: /.*/
