@@ -102,11 +102,11 @@ jobs:
 
             # upload the zip file
             export ZIP_PATH="lambda-s3/build/distributions/"
-            mv ${ZIP_PATH}/lamda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip
+            mv ${ZIP_PATH}/lambda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lambda-s3-${NEXT_TAG}.zip
             apk update
             apk add py-pip
             pip install awscli
-            aws s3 cp ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lamda-s3-${NEXT_TAG}.zip
+            aws s3 cp ${ZIP_PATH}/lambda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lambda-s3-${NEXT_TAG}.zip
 
             # push the tag
             TOKEN=`curl -X POST -u "${BITBUCKET_ACCESS_KEY}:${BITBUCKET_ACCESS_SECRET}"       https://bitbucket.org/site/oauth2/access_token       -d grant_type=client_credentials | jq .access_token -r`
@@ -153,11 +153,11 @@ jobs:
 
             # upload the zip file
             export ZIP_PATH="lambda-s3/build/distributions/"
-            mv ${ZIP_PATH}/lamda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip
+            mv ${ZIP_PATH}/lambda-s3-1.0-SNAPSHOT.zip ${ZIP_PATH}/lambda-s3-${NEXT_TAG}.zip
             apk update
             apk add py-pip
             pip install awscli
-            aws s3 cp ${ZIP_PATH}/lamda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lamda-s3-${NEXT_TAG}.zip
+            aws s3 cp ${ZIP_PATH}/lambda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lambda-s3-${NEXT_TAG}.zip
 
             # push the tag
             echo "Set Bitbucket Username & Email"
@@ -181,7 +181,7 @@ jobs:
             ENVIRONMENT: << parameters.environment >>
           command: |
             pushd terragrunt/dfp-mts-${ENVIRONMENT}
-            export TF_VAR_s3_key="libs/lamda-s3-${CIRCLE_TAG}.zip"
+            export TF_VAR_s3_key="libs/lambda-s3-${CIRCLE_TAG}.zip"
             export TF_VAR_environment="${ENVIRONMENT}"
             terragrunt validate-all
             terragrunt plan-all --terragrunt-non-interactive
@@ -200,7 +200,7 @@ jobs:
             ENVIRONMENT: << parameters.environment >>
           command: |
             pushd terragrunt/dfp-mts-${ENVIRONMENT}
-            export TF_VAR_s3_key="libs/lamda-s3-${CIRCLE_TAG}.zip"
+            export TF_VAR_s3_key="libs/lambda-s3-${CIRCLE_TAG}.zip"
             export TF_VAR_environment="${ENVIRONMENT}"
             terragrunt plan-all --terragrunt-non-interactive
             terragrunt apply-all --terragrunt-non-interactive -auto-approve
