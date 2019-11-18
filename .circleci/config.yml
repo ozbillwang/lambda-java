@@ -160,8 +160,7 @@ jobs:
             aws s3 cp ${ZIP_PATH}/lambda-s3-${NEXT_TAG}.zip s3://${AWS_ACCOUNT_ID}-lambda-assets/libs/lambda-s3-${NEXT_TAG}.zip
 
             ssh-add -D
-            ls -l ~/.ssh/config
-            cat ~/.ssh/config
+            ls -l ~/.ssh
 
             # push the tag
             echo "Set Bitbucket Username & Email"
