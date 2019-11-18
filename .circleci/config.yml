@@ -183,7 +183,7 @@ jobs:
           environment:
             ENVIRONMENT: << parameters.environment >>
           command: |
-            pushd terragrunt/dfp-mts-${ENVIRONMENT}
+            pushd terragrunt/${ENVIRONMENT}
             export TF_VAR_s3_key="libs/lambda-s3-${CIRCLE_TAG}.zip"
             export TF_VAR_environment="${ENVIRONMENT}"
             terragrunt validate-all
@@ -202,7 +202,7 @@ jobs:
           environment:
             ENVIRONMENT: << parameters.environment >>
           command: |
-            pushd terragrunt/dfp-mts-${ENVIRONMENT}
+            pushd terragrunt/${ENVIRONMENT}
             export TF_VAR_s3_key="libs/lambda-s3-${CIRCLE_TAG}.zip"
             export TF_VAR_environment="${ENVIRONMENT}"
             terragrunt plan-all --terragrunt-non-interactive
