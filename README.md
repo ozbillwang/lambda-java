@@ -25,19 +25,19 @@ With CircleCI, I can manage the cicd with best practices.
 
 * commits to non-master branch, such as feature branches, bugfix branches
 
-circle ci will only run the build and tests (such as unit test, integration tests.
+circle ci will only run the build and tests, such as unit test, integration test, and security check.
 
 ![pipeline on non-master branches](images/non-master.png)
 
 * commits to master branch or pull requests are merged to master brach
 
-circle ci will run build and add incremental semantic version automatically
+circle ci will run build and add incremental semantic version automatically, for example, if the latest tag is `1.0.123`, after build is successful, circle ci pipeline will create new tag `1.0.124` on master branch
 
 ![pipeline on master branches](images/master.png)
 
 * if new version detected (new tag applied on master branch)
 
-circlec ci will run the deployment dry-run to dev environment first and waiting for approval, then deploy to dev environment. 
+circlec ci will run the deployment (dry-run) first to dev environment and waiting for reviewing and approval, then deploy to dev environment. 
 
 ![pipeline on new tag created](images/tag.png)
 
