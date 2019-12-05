@@ -19,7 +19,7 @@
  * License for the specific language governing permissions and
  * limitations under the License.
  */
-package com.example.s3;
+package lambda.s3;
 // snippet-start:[s3.java2.s3_bucket_ops.complete]
 // snippet-start:[s3.java2.s3_bucket_ops.import]
 
