@@ -47,8 +47,6 @@ jobs:
           name: Run tests in parallel # See: https://circleci.com/docs/2.0/parallelism-faster-jobs/
           command: |
             pushd ${LAMBDA_PATH}
-            docker run -d -p 8081:8081 --name nexus sonatype/nexus:oss
-            sleep 20
             # add unit test and integration test here
             gradle build
             ls -l build/libs
