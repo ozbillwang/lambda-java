@@ -5,7 +5,7 @@ apply plugin: 'maven'
 
 repositories {
     maven {
-          url "http://localhost:8081/nexus/content/groups/public"
+          url "${nexusUrl}/content/groups/public"
     }
 }
 
@@ -21,8 +21,8 @@ dependencies {
 uploadArchives {
     repositories {
        mavenDeployer {
-             repository(url: "http://localhost:8081/nexus/content/repositories/snapshots") {
-             authentication(userName: "admin", password: "admin123")
+             repository(url: "${nexusUrl}/content/repositories/snapshots") {
+             authentication(userName: nexusUsername, password: nexusPassword)
 }
              pom.version = "1.0-SNAPSHOT"
              pom.artifactId = "lambda-s3"
