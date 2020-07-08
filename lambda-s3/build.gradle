@@ -1,12 +1,11 @@
 version '1.0-SNAPSHOT'
 
 apply plugin: 'java'
-apply plugin: 'maven'
 
 repositories {
-    maven {
-          url "${nexusUrl}/content/groups/public"
-    }
+    // Use jcenter for resolving dependencies.
+    // You can declare any Maven/Ivy/file repository here.
+    jcenter()
 }
 
 dependencies {
@@ -16,19 +15,6 @@ dependencies {
         'com.amazonaws:aws-lambda-java-events:2.2.6',
         'com.amazonaws:aws-java-sdk-s3'
     )
-}
-
-uploadArchives {
-    repositories {
-       mavenDeployer {
-             repository(url: "${nexusUrl}/content/repositories/snapshots") {
-             authentication(userName: nexusUsername, password: nexusPassword)
-}
-             pom.version = "1.0-SNAPSHOT"
-             pom.artifactId = "lambda-s3"
-             pom.groupId = "com.example"
-       }
-    }
 }
 
 task buildZip(type: Zip) {
