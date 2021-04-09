@@ -1,4 +1,4 @@
-# Deploy java lambda function with terraform/terragrunt
+# Deploy java lambda function with terraform/terragrunt 
 
 This is a template for using terraform/terragrunt to manage lambda function with fully cicd pipepline.
 
